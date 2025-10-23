@@ -9,8 +9,6 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 import re
-import requests
-from collections import Counter
 
 # --- Configuración de página ---
 st.set_page_config(
@@ -19,148 +17,33 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Funciones para extraer datos de APIs ---
-@st.cache_data(ttl=86400)  # Cache por 24 horas
-def extraer_habilidades_del_texto(texto):
-    """Extrae habilidades técnicas comunes del texto"""
-    texto_lower = texto.lower()
-    
-    habilidades_tech = {
-        'python', 'r', 'sql', 'java', 'javascript', 'scala', 'julia',
-        'c++', 'typescript', 'machine learning', 'deep learning', 'nlp',
-        'computer vision', 'tensorflow', 'pytorch', 'keras', 'scikit-learn',
-        'spark', 'hadoop', 'kafka', 'airflow', 'aws', 'azure', 'gcp',
-        'docker', 'kubernetes', 'git', 'tableau', 'power bi', 'excel',
-        'pandas', 'numpy', 'statistics', 'a/b testing', 'mlops',
-        'postgresql', 'mongodb', 'redis', 'api', 'rest', 'agile'
+# --- Base de datos de puestos (puedes cargar desde CSV) ---
+PUESTOS_DATA = {
+    "Data Scientist": {
+        "palabras_clave": ["Python", "Machine Learning", "SQL", "Estadística", "Pandas", "Scikit-learn", "TensorFlow", "Visualización de datos", "A/B Testing"],
+        "habilidades_tecnicas": ["Python", "R", "SQL", "Machine Learning", "Deep Learning", "Estadística", "Big Data"],
+        "herramientas": ["Jupyter", "Git", "Docker", "AWS", "Azure", "Tableau", "Power BI"],
+        "nivel": "Senior"
+    },
+    "Data Analyst": {
+        "palabras_clave": ["SQL", "Excel", "Power BI", "Tableau", "Análisis de datos", "Dashboard", "KPI", "Reporting"],
+        "habilidades_tecnicas": ["SQL", "Excel avanzado", "Power BI", "Tableau", "Python básico", "Estadística descriptiva"],
+        "herramientas": ["Excel", "Power BI", "Tableau", "SQL Server", "Google Analytics"],
+        "nivel": "Junior"
+    },
+    "ML Engineer": {
+        "palabras_clave": ["Python", "TensorFlow", "PyTorch", "MLOps", "Docker", "Kubernetes", "CI/CD", "Cloud", "Deployment"],
+        "habilidades_tecnicas": ["Python", "Machine Learning", "Deep Learning", "MLOps", "DevOps", "Cloud Computing"],
+        "herramientas": ["TensorFlow", "PyTorch", "Docker", "Kubernetes", "AWS", "MLflow", "Git"],
+        "nivel": "Senior"
+    },
+    "AI Research Scientist": {
+        "palabras_clave": ["PhD", "Research", "Publicaciones", "Deep Learning", "NLP", "Computer Vision", "PyTorch", "Paper"],
+        "habilidades_tecnicas": ["Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning", "Matemáticas avanzadas"],
+        "herramientas": ["PyTorch", "TensorFlow", "JAX", "Weights & Biases", "Papers with Code"],
+        "nivel": "Alto"
     }
-    
-    encontradas = []
-    for habilidad in habilidades_tech:
-        if habilidad in texto_lower:
-            if habilidad in ['aws', 'gcp', 'nlp', 'api', 'sql', 'mlops']:
-                encontradas.append(habilidad.upper())
-            else:
-                encontradas.append(habilidad.title())
-    
-    return list(set(encontradas))
-
-@st.cache_data(ttl=86400)
-def obtener_datos_desde_remotive(puesto, limite=15):
-    """Obtiene datos desde Remotive.io API"""
-    try:
-        response = requests.get("https://remotive.com/api/remote-jobs", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            jobs = data.get('jobs', [])
-            
-            jobs_filtrados = [
-                job for job in jobs 
-                if puesto.lower() in job.get('title', '').lower() or
-                   puesto.lower() in job.get('category', '').lower()
-            ][:limite]
-            
-            return jobs_filtrados
-        return []
-    except:
-        return []
-
-@st.cache_data(ttl=86400)
-def procesar_puesto_desde_api(nombre_puesto):
-    """Procesa un puesto desde la API y devuelve datos estructurados"""
-    jobs = obtener_datos_desde_remotive(nombre_puesto, limite=20)
-    
-    if not jobs:
-        return None
-    
-    todas_habilidades = []
-    for job in jobs:
-        descripcion = job.get('description', '') + ' ' + job.get('job_type', '')
-        habilidades = extraer_habilidades_del_texto(descripcion)
-        todas_habilidades.extend(habilidades)
-    
-    contador = Counter(todas_habilidades)
-    top_habilidades = [hab for hab, _ in contador.most_common(20)]
-    
-    # Separar habilidades de herramientas
-    herramientas_conocidas = ['Docker', 'Kubernetes', 'Git', 'Tableau', 'Power Bi', 
-                             'Excel', 'Aws', 'Azure', 'Gcp']
-    
-    habilidades_tecnicas = [h for h in top_habilidades if h not in herramientas_conocidas][:10]
-    herramientas = [h for h in top_habilidades if h in herramientas_conocidas][:7]
-    palabras_clave = top_habilidades[:12]
-    
-    # Determinar nivel
-    nivel = 'Mid-level'
-    if 'senior' in nombre_puesto.lower() or 'lead' in nombre_puesto.lower():
-        nivel = 'Senior'
-    elif 'junior' in nombre_puesto.lower():
-        nivel = 'Junior'
-    
-    return {
-        'palabras_clave': palabras_clave,
-        'habilidades_tecnicas': habilidades_tecnicas if habilidades_tecnicas else ['Python', 'SQL'],
-        'herramientas': herramientas if herramientas else ['Git', 'Excel'],
-        'nivel': nivel
-    }
-
-# --- Inicializar base de datos con API o fallback ---
-@st.cache_data(ttl=86400)
-def cargar_puestos_data():
-    """Carga datos desde API o usa fallback"""
-    
-    puestos_objetivo = [
-        "Data Scientist",
-        "Data Analyst", 
-        "Machine Learning Engineer",
-        "AI Research Scientist",
-        "Data Engineer",
-        "Business Intelligence Analyst"
-    ]
-    
-    puestos_data = {}
-    
-    # Mostrar progreso
-    with st.spinner("🔄 Cargando datos actualizados de puestos..."):
-        for puesto in puestos_objetivo:
-            datos_api = procesar_puesto_desde_api(puesto)
-            
-            if datos_api:
-                puestos_data[puesto] = datos_api
-    
-    # Fallback si no se obtuvo nada
-    if not puestos_data:
-        puestos_data = {
-            "Data Scientist": {
-                "palabras_clave": ["Python", "Machine Learning", "SQL", "Estadística", "Pandas", "Scikit-learn", "TensorFlow", "Visualización de datos", "A/B Testing"],
-                "habilidades_tecnicas": ["Python", "R", "SQL", "Machine Learning", "Deep Learning", "Estadística", "Big Data"],
-                "herramientas": ["Jupyter", "Git", "Docker", "AWS", "Azure", "Tableau", "Power BI"],
-                "nivel": "Senior"
-            },
-            "Data Analyst": {
-                "palabras_clave": ["SQL", "Excel", "Power BI", "Tableau", "Análisis de datos", "Dashboard", "KPI", "Reporting"],
-                "habilidades_tecnicas": ["SQL", "Excel avanzado", "Power BI", "Tableau", "Python básico", "Estadística descriptiva"],
-                "herramientas": ["Excel", "Power BI", "Tableau", "SQL Server", "Google Analytics"],
-                "nivel": "Junior"
-            },
-            "Machine Learning Engineer": {
-                "palabras_clave": ["Python", "TensorFlow", "PyTorch", "MLOps", "Docker", "Kubernetes", "CI/CD", "Cloud", "Deployment"],
-                "habilidades_tecnicas": ["Python", "Machine Learning", "Deep Learning", "MLOps", "DevOps", "Cloud Computing"],
-                "herramientas": ["TensorFlow", "PyTorch", "Docker", "Kubernetes", "AWS", "MLflow", "Git"],
-                "nivel": "Senior"
-            },
-            "AI Research Scientist": {
-                "palabras_clave": ["PhD", "Research", "Publicaciones", "Deep Learning", "NLP", "Computer Vision", "PyTorch", "Paper"],
-                "habilidades_tecnicas": ["Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning", "Matemáticas avanzadas"],
-                "herramientas": ["PyTorch", "TensorFlow", "JAX", "Weights & Biases", "Papers with Code"],
-                "nivel": "Alto"
-            }
-        }
-    
-    return puestos_data
-
-# Cargar datos
-PUESTOS_DATA = cargar_puestos_data()
+}
 
 # --- Funciones auxiliares ---
 def generar_sugerencias(campo, puesto_data):
@@ -168,7 +51,7 @@ def generar_sugerencias(campo, puesto_data):
     sugerencias = {
         "resumen": f"Incluí palabras como: {', '.join(puesto_data['palabras_clave'][:5])}",
         "experiencia": "Usá verbos de acción: Desarrollé, Implementé, Lideré, Optimicé, Analicé",
-        "habilidades": f"Sugerencias: {', '.join(puesto_data['habilidades_tecnicas'][:5])}",
+        "habilidades": f"Sugerencias: {', '.join(puesto_data['habilidades_tecnicas'])}",
         "proyectos": "Describí el impacto cuantificable (ej: 'Reduje el tiempo de procesamiento en 40%')"
     }
     return sugerencias.get(campo, "")
@@ -187,7 +70,7 @@ def calcular_score_ats(cv_data, puesto_data):
         if palabra.lower() in texto_completo:
             palabras_encontradas.append(palabra)
     
-    score = len(palabras_encontradas) / len(puesto_data["palabras_clave"]) if puesto_data["palabras_clave"] else 0
+    score = len(palabras_encontradas) / len(puesto_data["palabras_clave"])
     return score, palabras_encontradas
 
 def generar_cv_pdf(cv_data, puesto):
@@ -281,17 +164,6 @@ def generar_cv_pdf(cv_data, puesto):
 st.title("📝 Generador Inteligente de CVs")
 st.markdown("### Creá un CV optimizado para sistemas ATS (Applicant Tracking Systems)")
 
-# Info sobre datos actualizados
-if len(PUESTOS_DATA) > 4:
-    st.success(f"✅ Base de datos actualizada con {len(PUESTOS_DATA)} puestos desde APIs de empleo")
-else:
-    st.info("ℹ️ Usando base de datos por defecto (la API podría no estar disponible)")
-
-# Botón para forzar actualización
-if st.button("🔄 Actualizar datos de puestos", help="Refresca los datos desde las APIs"):
-    st.cache_data.clear()
-    st.rerun()
-
 # Sidebar
 with st.sidebar:
     st.header("💡 ¿Cómo funciona?")
@@ -307,10 +179,6 @@ with st.sidebar:
     2. Incluir palabras clave relevantes
     3. Optimizar tu contenido para ATS
     4. Generar un PDF profesional
-    
-    **Datos actualizados desde:**
-    - Remotive.io (ofertas remotas)
-    - Análisis de descripciones reales
     """)
     
     st.divider()
@@ -352,8 +220,6 @@ if puesto_objetivo:
         st.write(", ".join(puesto_info["palabras_clave"]))
         st.write("**Habilidades técnicas:**")
         st.write(", ".join(puesto_info["habilidades_tecnicas"]))
-        st.write("**Herramientas:**")
-        st.write(", ".join(puesto_info["herramientas"]))
 
 st.divider()
 
@@ -571,6 +437,9 @@ if st.button("🔍 Analizar y generar CV", type="primary"):
     else:
         st.error("⚠️ Por favor, completá al menos tu nombre y resumen profesional.")
 
+# Footer
+st.divider()
+st.caption("💼 Herramienta diseñada para optimizar CVs según algoritmos ATS utilizados por empresas tech")
 # Footer
 st.divider()
 st.caption("💼 Herramienta con datos actualizados desde APIs de empleo | Optimizada para sistemas ATS")
