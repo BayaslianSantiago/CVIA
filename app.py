@@ -19,7 +19,6 @@ st.set_page_config(
 
 # --- Base de datos de puestos (puedes cargar desde CSV) ---
 PUESTOS_DATA = {
-    # --- SECTOR DATOS / IA / TECNOLOGÍA ---
     "Data Scientist": {
         "palabras_clave": ["Python", "Machine Learning", "SQL", "Estadística", "Pandas", "Scikit-learn", "TensorFlow", "Visualización de datos", "A/B Testing"],
         "habilidades_tecnicas": ["Python", "R", "SQL", "Machine Learning", "Deep Learning", "Estadística", "Big Data"],
@@ -43,119 +42,8 @@ PUESTOS_DATA = {
         "habilidades_tecnicas": ["Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning", "Matemáticas avanzadas"],
         "herramientas": ["PyTorch", "TensorFlow", "JAX", "Weights & Biases", "Papers with Code"],
         "nivel": "Alto"
-    },
-
-    # --- DESARROLLO Y TECNOLOGÍA ---
-    "Software Engineer": {
-        "palabras_clave": ["Java", "Python", "C++", "Git", "APIs", "Microservicios", "Testing", "Backend", "Frontend"],
-        "habilidades_tecnicas": ["Programación", "Diseño de sistemas", "Estructuras de datos", "Algoritmos", "Bases de datos"],
-        "herramientas": ["Git", "Docker", "VS Code", "Postman", "AWS", "Jenkins"],
-        "nivel": "Intermedio"
-    },
-    "Frontend Developer": {
-        "palabras_clave": ["HTML", "CSS", "JavaScript", "React", "Vue", "Angular", "UX/UI", "Responsive Design"],
-        "habilidades_tecnicas": ["HTML5", "CSS3", "JavaScript", "React", "UX/UI", "Testing de interfaces"],
-        "herramientas": ["Figma", "VS Code", "Git", "React", "Next.js"],
-        "nivel": "Intermedio"
-    },
-    "Backend Developer": {
-        "palabras_clave": ["Node.js", "Python", "Java", "SQL", "APIs REST", "Microservicios", "Seguridad", "Escalabilidad"],
-        "habilidades_tecnicas": ["Desarrollo backend", "Bases de datos", "API design", "Testing", "Optimización de rendimiento"],
-        "herramientas": ["PostgreSQL", "MongoDB", "Docker", "Express", "FastAPI", "Git"],
-        "nivel": "Intermedio"
-    },
-    "DevOps Engineer": {
-        "palabras_clave": ["CI/CD", "Docker", "Kubernetes", "AWS", "Azure", "Infraestructura", "Pipelines"],
-        "habilidades_tecnicas": ["Automatización", "Cloud", "Despliegue continuo", "Infraestructura como código"],
-        "herramientas": ["Jenkins", "GitLab CI", "Terraform", "Docker", "Kubernetes", "Ansible"],
-        "nivel": "Senior"
-    },
-
-    # --- RECURSOS HUMANOS ---
-    "HR Analyst": {
-        "palabras_clave": ["Recursos Humanos", "Selección", "Capacitación", "Evaluaciones", "Indicadores", "Clima laboral"],
-        "habilidades_tecnicas": ["Reclutamiento", "Entrevistas", "Gestión de desempeño", "Análisis de personal"],
-        "herramientas": ["SAP HR", "Excel", "LinkedIn Recruiter", "BambooHR"],
-        "nivel": "Intermedio"
-    },
-    "Talent Acquisition Specialist": {
-        "palabras_clave": ["Reclutamiento", "Selección", "Onboarding", "Head Hunting", "Entrevistas", "LinkedIn"],
-        "habilidades_tecnicas": ["Sourcing", "Entrevistas por competencias", "Gestión de candidatos", "Employer branding"],
-        "herramientas": ["LinkedIn Recruiter", "Workday", "BambooHR", "Excel"],
-        "nivel": "Intermedio"
-    },
-
-    # --- ADMINISTRACIÓN Y FINANZAS ---
-    "Administrative Assistant": {
-        "palabras_clave": ["Atención al cliente", "Facturación", "Gestión de documentos", "Agenda", "Proveedores"],
-        "habilidades_tecnicas": ["Organización", "Comunicación", "Gestión administrativa", "Soporte a equipos"],
-        "herramientas": ["Excel", "Word", "Google Workspace", "ERP"],
-        "nivel": "Junior"
-    },
-    "Accountant": {
-        "palabras_clave": ["Contabilidad", "Balances", "Impuestos", "Liquidación", "Conciliaciones bancarias"],
-        "habilidades_tecnicas": ["Análisis contable", "Normas fiscales", "Gestión de impuestos", "Control financiero"],
-        "herramientas": ["Tango", "SAP", "Excel", "AFIP"],
-        "nivel": "Senior"
-    },
-    "Financial Analyst": {
-        "palabras_clave": ["Finanzas", "Presupuesto", "Forecast", "Análisis financiero", "Inversiones"],
-        "habilidades_tecnicas": ["Modelos financieros", "Control de gestión", "Excel avanzado", "Análisis de rentabilidad"],
-        "herramientas": ["Excel", "Power BI", "SAP", "QuickBooks"],
-        "nivel": "Intermedio"
-    },
-
-    # --- LOGÍSTICA Y OPERACIONES ---
-    "Logistics Coordinator": {
-        "palabras_clave": ["Logística", "Inventario", "Distribución", "Transporte", "Depósito"],
-        "habilidades_tecnicas": ["Gestión de stock", "Optimización de rutas", "Planificación logística", "Coordinación"],
-        "herramientas": ["SAP", "Excel", "Google Maps", "ERP"],
-        "nivel": "Intermedio"
-    },
-    "Supply Chain Analyst": {
-        "palabras_clave": ["Cadena de suministro", "Demanda", "Planificación", "Proveedores", "Optimización"],
-        "habilidades_tecnicas": ["Análisis de datos logísticos", "Gestión de proveedores", "Forecasting", "Compras"],
-        "herramientas": ["Excel", "Power BI", "SAP SCM", "ERP"],
-        "nivel": "Intermedio"
-    },
-
-    # --- VENTAS Y MARKETING ---
-    "Sales Executive": {
-        "palabras_clave": ["Ventas", "Prospección", "Negociación", "CRM", "Cierre de ventas"],
-        "habilidades_tecnicas": ["Comunicación", "Gestión de clientes", "Análisis de mercado", "Negociación"],
-        "herramientas": ["Salesforce", "HubSpot", "Excel", "CRM"],
-        "nivel": "Intermedio"
-    },
-    "Digital Marketing Specialist": {
-        "palabras_clave": ["SEO", "SEM", "Google Ads", "Social Media", "Estrategia", "Contenido", "Email Marketing"],
-        "habilidades_tecnicas": ["Analítica web", "Publicidad online", "Gestión de campañas", "Copywriting"],
-        "herramientas": ["Google Analytics", "Google Ads", "Meta Business Suite", "Canva", "HubSpot"],
-        "nivel": "Intermedio"
-    },
-
-    # --- ATENCIÓN AL CLIENTE ---
-    "Customer Service Representative": {
-        "palabras_clave": ["Atención al cliente", "Resolución de problemas", "Soporte", "CRM", "Comunicación"],
-        "habilidades_tecnicas": ["Empatía", "Comunicación efectiva", "Gestión de reclamos", "Orientación al cliente"],
-        "herramientas": ["Zendesk", "HubSpot", "CRM", "Microsoft Teams"],
-        "nivel": "Junior"
-    },
-
-    # --- SALUD ---
-    "Healthcare Assistant": {
-        "palabras_clave": ["Pacientes", "Asistencia", "Turnos", "Clínica", "Salud"],
-        "habilidades_tecnicas": ["Atención sanitaria", "Comunicación", "Organización", "Apoyo clínico"],
-        "herramientas": ["Excel", "Sistemas médicos", "Google Calendar"],
-        "nivel": "Junior"
-    },
-    "Nurse": {
-        "palabras_clave": ["Enfermería", "Pacientes", "Cuidados", "Hospital", "Urgencias", "Tratamientos"],
-        "habilidades_tecnicas": ["Cuidados básicos", "Administración de medicamentos", "Trabajo en equipo", "Atención primaria"],
-        "herramientas": ["Historias clínicas digitales", "Sistemas hospitalarios", "Equipos médicos"],
-        "nivel": "Intermedio"
     }
 }
-
 
 # --- Funciones auxiliares ---
 def generar_sugerencias(campo, puesto_data):
@@ -552,6 +440,3 @@ if st.button("🔍 Analizar y generar CV", type="primary"):
 # Footer
 st.divider()
 st.caption("💼 Herramienta diseñada para optimizar CVs según algoritmos ATS utilizados por empresas tech")
-# Footer
-st.divider()
-st.caption("💼 Herramienta con datos actualizados desde APIs de empleo | Optimizada para sistemas ATS")
