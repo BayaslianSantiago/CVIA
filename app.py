@@ -1,100 +1,125 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
-import re
+from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+import requests
 
-# --- Configuración de página ---
-st.set_page_config(
-    page_title="Generador Inteligente de CVs",
-    page_icon="📝",
-    layout="wide"
-)
+# --- Configuración ---
+st.set_page_config(page_title="Generador de CVs", page_icon="📄", layout="centered")
 
-# --- Base de datos de puestos (puedes cargar desde CSV) ---
-PUESTOS_DATA = {
-    "Data Scientist": {
-        "palabras_clave": ["Python", "Machine Learning", "SQL", "Estadística", "Pandas", "Scikit-learn", "TensorFlow", "Visualización de datos", "A/B Testing"],
-        "habilidades_tecnicas": ["Python", "R", "SQL", "Machine Learning", "Deep Learning", "Estadística", "Big Data"],
-        "herramientas": ["Jupyter", "Git", "Docker", "AWS", "Azure", "Tableau", "Power BI"],
-        "nivel": "Senior"
+# URL del CSV en GitHub (ejemplo - reemplazar con tu URL)
+CSV_URL = "https://raw.githubusercontent.com/BayaslianSantiago/CVIA/refs/heads/main/puestos.csv"
+
+# Estilos por categoría
+ESTILOS = {
+    "Tecnología": {
+        "color_primario": "#2C3E50",
+        "color_secundario": "#3498DB",
+        "layout": "moderno"
     },
-    "Data Analyst": {
-        "palabras_clave": ["SQL", "Excel", "Power BI", "Tableau", "Análisis de datos", "Dashboard", "KPI", "Reporting"],
-        "habilidades_tecnicas": ["SQL", "Excel avanzado", "Power BI", "Tableau", "Python básico", "Estadística descriptiva"],
-        "herramientas": ["Excel", "Power BI", "Tableau", "SQL Server", "Google Analytics"],
-        "nivel": "Junior"
+    "Marketing": {
+        "color_primario": "#E91E63",
+        "color_secundario": "#FF6F00",
+        "layout": "creativo"
     },
-    "ML Engineer": {
-        "palabras_clave": ["Python", "TensorFlow", "PyTorch", "MLOps", "Docker", "Kubernetes", "CI/CD", "Cloud", "Deployment"],
-        "habilidades_tecnicas": ["Python", "Machine Learning", "Deep Learning", "MLOps", "DevOps", "Cloud Computing"],
-        "herramientas": ["TensorFlow", "PyTorch", "Docker", "Kubernetes", "AWS", "MLflow", "Git"],
-        "nivel": "Senior"
+    "Finanzas": {
+        "color_primario": "#1A237E",
+        "color_secundario": "#5C6BC0",
+        "layout": "formal"
     },
-    "AI Research Scientist": {
-        "palabras_clave": ["PhD", "Research", "Publicaciones", "Deep Learning", "NLP", "Computer Vision", "PyTorch", "Paper"],
-        "habilidades_tecnicas": ["Deep Learning", "NLP", "Computer Vision", "Reinforcement Learning", "Matemáticas avanzadas"],
-        "herramientas": ["PyTorch", "TensorFlow", "JAX", "Weights & Biases", "Papers with Code"],
-        "nivel": "Alto"
+    "Salud": {
+        "color_primario": "#1976D2",
+        "color_secundario": "#4FC3F7",
+        "layout": "profesional"
+    },
+    "Educación": {
+        "color_primario": "#FF9800",
+        "color_secundario": "#FFC107",
+        "layout": "amigable"
+    },
+    "Ventas": {
+        "color_primario": "#D32F2F",
+        "color_secundario": "#FF5252",
+        "layout": "dinámico"
+    },
+    "General": {
+        "color_primario": "#424242",
+        "color_secundario": "#757575",
+        "layout": "clásico"
     }
 }
 
-# --- Funciones auxiliares ---
-def generar_sugerencias(campo, puesto_data):
-    """Genera sugerencias contextuales según el campo"""
-    sugerencias = {
-        "resumen": f"Incluí palabras como: {', '.join(puesto_data['palabras_clave'][:5])}",
-        "experiencia": "Usá verbos de acción: Desarrollé, Implementé, Lideré, Optimicé, Analicé",
-        "habilidades": f"Sugerencias: {', '.join(puesto_data['habilidades_tecnicas'])}",
-        "proyectos": "Describí el impacto cuantificable (ej: 'Reduje el tiempo de procesamiento en 40%')"
-    }
-    return sugerencias.get(campo, "")
+# --- Funciones ---
+@st.cache_data(ttl=3600)
+def cargar_puestos():
+    """Carga puestos desde CSV en GitHub o usa datos de ejemplo"""
+    try:
+        df = pd.read_csv(CSV_URL)
+        return df
+    except:
+        # Datos de ejemplo si falla la carga
+        data = {
+            "puesto": ["Data Scientist", "Marketing Manager", "Contador", "Enfermero/a", "Profesor/a"],
+            "categoria": ["Tecnología", "Marketing", "Finanzas", "Salud", "Educación"],
+            "palabras_clave": [
+                "Python,Machine Learning,SQL,Análisis de datos",
+                "SEO,Google Ads,Redes sociales,Analytics",
+                "Contabilidad,Impuestos,Auditoría,NIIF",
+                "Atención al paciente,RCP,Administración de medicamentos",
+                "Planificación didáctica,Evaluación,Pedagogía"
+            ],
+            "verbos_accion": [
+                "Desarrollé,Implementé,Optimicé,Analicé",
+                "Lancé,Aumenté,Gestioné,Posicioné",
+                "Preparé,Audité,Concilié,Analicé",
+                "Atendí,Administré,Monitoricé,Asistí",
+                "Planifiqué,Enseñé,Evalué,Desarrollé"
+            ],
+            "habilidades_sugeridas": [
+                "Python,SQL,Machine Learning,Pandas,Tableau",
+                "Google Ads,SEO,Facebook Ads,Analytics,Copywriting",
+                "Excel,SAP,Tango,Contabilidad,Impuestos",
+                "RCP,Primeros auxilios,Administración de medicamentos",
+                "Pedagogía,Manejo de aula,Herramientas digitales"
+            ]
+        }
+        return pd.DataFrame(data)
 
-def calcular_score_ats(cv_data, puesto_data):
-    """Calcula el score ATS basado en palabras clave"""
-    texto_completo = " ".join([
-        cv_data.get("resumen", ""),
-        " ".join([exp.get("descripcion", "") for exp in cv_data.get("experiencias", [])]),
-        " ".join(cv_data.get("habilidades", [])),
-        " ".join([proy.get("descripcion", "") for proy in cv_data.get("proyectos", [])])
-    ]).lower()
-    
-    palabras_encontradas = []
-    for palabra in puesto_data["palabras_clave"]:
-        if palabra.lower() in texto_completo:
-            palabras_encontradas.append(palabra)
-    
-    score = len(palabras_encontradas) / len(puesto_data["palabras_clave"])
-    return score, palabras_encontradas
-
-def generar_cv_pdf(cv_data, puesto):
-    """Genera un PDF profesional del CV"""
+def generar_pdf(cv_data, estilo):
+    """Genera PDF con diseño según categoría"""
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, 
+                           topMargin=0.5*inch, bottomMargin=0.5*inch,
+                           leftMargin=0.75*inch, rightMargin=0.75*inch)
     story = []
     styles = getSampleStyleSheet()
+    
+    # Colores según categoría
+    color_1 = HexColor(estilo["color_primario"])
+    color_2 = HexColor(estilo["color_secundario"])
     
     # Estilos personalizados
     style_nombre = ParagraphStyle(
         'Nombre',
         parent=styles['Heading1'],
-        fontSize=24,
-        textColor=HexColor("#2C3E50"),
-        spaceAfter=6,
-        alignment=TA_CENTER
+        fontSize=26,
+        textColor=color_1,
+        spaceAfter=4,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
     )
     
     style_contacto = ParagraphStyle(
         'Contacto',
         parent=styles['Normal'],
         fontSize=10,
-        textColor=HexColor("#7F8C8D"),
+        textColor=HexColor("#666666"),
         alignment=TA_CENTER,
         spaceAfter=20
     )
@@ -103,86 +128,100 @@ def generar_cv_pdf(cv_data, puesto):
         'Seccion',
         parent=styles['Heading2'],
         fontSize=14,
-        textColor=HexColor("#3498DB"),
+        textColor=color_2,
         spaceAfter=10,
         spaceBefore=15,
-        borderWidth=0,
-        borderColor=HexColor("#3498DB"),
-        borderPadding=5
+        fontName='Helvetica-Bold',
+        borderWidth=1,
+        borderColor=color_2,
+        borderPadding=3
     )
     
-    # Encabezado
+    # Header - Nombre y contacto
     story.append(Paragraph(cv_data["nombre"], style_nombre))
-    contacto = f"{cv_data.get('email', '')} | {cv_data.get('telefono', '')} | {cv_data.get('ubicacion', '')}"
+    
+    contacto_parts = []
+    if cv_data.get("email"):
+        contacto_parts.append(cv_data["email"])
+    if cv_data.get("telefono"):
+        contacto_parts.append(cv_data["telefono"])
+    if cv_data.get("ubicacion"):
+        contacto_parts.append(cv_data["ubicacion"])
+    if cv_data.get("linkedin"):
+        contacto_parts.append(cv_data["linkedin"])
+    
+    contacto = " | ".join(contacto_parts)
     story.append(Paragraph(contacto, style_contacto))
     
     # Puesto objetivo
-    story.append(Paragraph(f"<b>Puesto objetivo:</b> {puesto}", styles['Normal']))
-    story.append(Spacer(1, 20))
+    if cv_data.get("puesto_objetivo"):
+        story.append(Paragraph(f"<b>Objetivo:</b> {cv_data['puesto_objetivo']}", styles['Normal']))
+        story.append(Spacer(1, 15))
     
-    # Resumen profesional
+    # Resumen
     if cv_data.get("resumen"):
         story.append(Paragraph("RESUMEN PROFESIONAL", style_seccion))
         story.append(Paragraph(cv_data["resumen"], styles['Normal']))
     
     # Experiencia
-    if cv_data.get("experiencias"):
+    if cv_data.get("experiencias") and len(cv_data["experiencias"]) > 0:
         story.append(Paragraph("EXPERIENCIA PROFESIONAL", style_seccion))
         for exp in cv_data["experiencias"]:
-            story.append(Paragraph(f"<b>{exp['puesto']}</b> - {exp['empresa']}", styles['Normal']))
-            story.append(Paragraph(f"<i>{exp['periodo']}</i>", styles['Normal']))
-            story.append(Paragraph(exp['descripcion'], styles['Normal']))
-            story.append(Spacer(1, 10))
+            if exp.get("puesto") or exp.get("empresa"):
+                titulo = f"<b>{exp.get('puesto', '')}</b>"
+                if exp.get("empresa"):
+                    titulo += f" - {exp['empresa']}"
+                story.append(Paragraph(titulo, styles['Normal']))
+                
+                if exp.get("periodo"):
+                    story.append(Paragraph(f"<i>{exp['periodo']}</i>", styles['Normal']))
+                
+                if exp.get("descripcion"):
+                    story.append(Paragraph(exp['descripcion'], styles['Normal']))
+                
+                story.append(Spacer(1, 10))
     
     # Educación
-    if cv_data.get("educacion"):
+    if cv_data.get("educacion") and len(cv_data["educacion"]) > 0:
         story.append(Paragraph("EDUCACIÓN", style_seccion))
         for edu in cv_data["educacion"]:
-            story.append(Paragraph(f"<b>{edu['titulo']}</b> - {edu['institucion']}", styles['Normal']))
-            story.append(Paragraph(f"<i>{edu['periodo']}</i>", styles['Normal']))
-            story.append(Spacer(1, 10))
+            if edu.get("titulo") or edu.get("institucion"):
+                titulo = f"<b>{edu.get('titulo', '')}</b>"
+                if edu.get("institucion"):
+                    titulo += f" - {edu['institucion']}"
+                story.append(Paragraph(titulo, styles['Normal']))
+                
+                if edu.get("periodo"):
+                    story.append(Paragraph(f"<i>{edu['periodo']}</i>", styles['Normal']))
+                
+                story.append(Spacer(1, 10))
     
-    # Habilidades técnicas
-    if cv_data.get("habilidades"):
-        story.append(Paragraph("HABILIDADES TÉCNICAS", style_seccion))
+    # Habilidades
+    if cv_data.get("habilidades") and len(cv_data["habilidades"]) > 0:
+        story.append(Paragraph("HABILIDADES", style_seccion))
         habilidades_texto = " • ".join(cv_data["habilidades"])
         story.append(Paragraph(habilidades_texto, styles['Normal']))
     
-    # Proyectos
-    if cv_data.get("proyectos"):
-        story.append(Paragraph("PROYECTOS DESTACADOS", style_seccion))
-        for proy in cv_data["proyectos"]:
-            story.append(Paragraph(f"<b>{proy['nombre']}</b>", styles['Normal']))
-            story.append(Paragraph(proy['descripcion'], styles['Normal']))
-            story.append(Spacer(1, 10))
+    # Certificaciones
+    if cv_data.get("certificaciones"):
+        story.append(Paragraph("CERTIFICACIONES", style_seccion))
+        story.append(Paragraph(cv_data["certificaciones"], styles['Normal']))
+    
+    # Idiomas
+    if cv_data.get("idiomas"):
+        story.append(Paragraph("IDIOMAS", style_seccion))
+        story.append(Paragraph(cv_data["idiomas"], styles['Normal']))
     
     doc.build(story)
     buffer.seek(0)
     return buffer
 
-# --- Interfaz principal ---
-st.title("📝 Generador Inteligente de CVs")
-st.markdown("### Creá un CV optimizado para sistemas ATS (Applicant Tracking Systems)")
+# --- Interfaz ---
+st.title("📄 Generador de CVs")
+st.markdown("Completá el formulario y descargá tu CV profesional en PDF")
 
-# Sidebar
-with st.sidebar:
-    st.header("💡 ¿Cómo funciona?")
-    st.markdown("""
-    **Los sistemas ATS escanean CVs buscando:**
-    - Palabras clave específicas del puesto
-    - Formato estructurado y legible
-    - Información clara y cuantificable
-    - Coincidencia con requisitos
-    
-    **Esta herramienta te ayuda a:**
-    1. Estructurar tu CV correctamente
-    2. Incluir palabras clave relevantes
-    3. Optimizar tu contenido para ATS
-    4. Generar un PDF profesional
-    """)
-    
-    st.divider()
-    st.metric("Score ATS objetivo", "70%+", help="Porcentaje mínimo recomendado")
+# Cargar datos
+df_puestos = cargar_puestos()
 
 # Inicializar estado
 if "cv_data" not in st.session_state:
@@ -191,252 +230,192 @@ if "cv_data" not in st.session_state:
         "email": "",
         "telefono": "",
         "ubicacion": "",
+        "linkedin": "",
+        "puesto_objetivo": "",
         "resumen": "",
         "experiencias": [],
         "educacion": [],
         "habilidades": [],
-        "proyectos": []
+        "certificaciones": "",
+        "idiomas": ""
     }
 
-# Paso 1: Selección de puesto
-st.subheader("🎯 Paso 1: Seleccioná tu puesto objetivo")
-col1, col2 = st.columns([2, 1])
+# --- PASO 1: Selección de puesto ---
+st.subheader("1️⃣ Tu puesto")
 
-with col1:
-    puesto_objetivo = st.selectbox(
-        "¿A qué puesto querés aplicar?",
-        options=list(PUESTOS_DATA.keys()),
-        help="Elegí el puesto para recibir sugerencias personalizadas"
-    )
-
-with col2:
-    if puesto_objetivo:
-        puesto_info = PUESTOS_DATA[puesto_objetivo]
-        st.info(f"**Nivel:** {puesto_info['nivel']}")
-
-if puesto_objetivo:
-    with st.expander("📋 Ver requisitos del puesto"):
-        st.write("**Palabras clave importantes:**")
-        st.write(", ".join(puesto_info["palabras_clave"]))
-        st.write("**Habilidades técnicas:**")
-        st.write(", ".join(puesto_info["habilidades_tecnicas"]))
-
-st.divider()
-
-# Paso 2: Información personal
-st.subheader("👤 Paso 2: Información personal")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.session_state.cv_data["nombre"] = st.text_input(
-        "Nombre completo*",
-        value=st.session_state.cv_data["nombre"],
-        placeholder="Juan Pérez"
-    )
-    st.session_state.cv_data["email"] = st.text_input(
-        "Email*",
-        value=st.session_state.cv_data["email"],
-        placeholder="juan.perez@email.com"
-    )
+    categorias = ["Todas"] + sorted(df_puestos["categoria"].unique().tolist())
+    categoria_sel = st.selectbox("Categoría", categorias)
 
 with col2:
-    st.session_state.cv_data["telefono"] = st.text_input(
-        "Teléfono*",
-        value=st.session_state.cv_data["telefono"],
-        placeholder="+54 11 1234-5678"
-    )
-    st.session_state.cv_data["ubicacion"] = st.text_input(
-        "Ubicación",
-        value=st.session_state.cv_data["ubicacion"],
-        placeholder="Buenos Aires, Argentina"
-    )
+    if categoria_sel == "Todas":
+        puestos_filtrados = df_puestos["puesto"].tolist()
+    else:
+        puestos_filtrados = df_puestos[df_puestos["categoria"] == categoria_sel]["puesto"].tolist()
+    
+    puesto_sel = st.selectbox("Puesto", puestos_filtrados)
+
+# Obtener datos del puesto
+if puesto_sel:
+    puesto_data = df_puestos[df_puestos["puesto"] == puesto_sel].iloc[0]
+    st.session_state.cv_data["puesto_objetivo"] = puesto_sel
+    categoria_final = puesto_data["categoria"]
+else:
+    categoria_final = "General"
 
 st.divider()
 
-# Paso 3: Resumen profesional
-st.subheader("📄 Paso 3: Resumen profesional")
-st.caption(f"💡 {generar_sugerencias('resumen', puesto_info)}")
+# --- PASO 2: Datos personales ---
+st.subheader("2️⃣ Datos personales")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.session_state.cv_data["nombre"] = st.text_input("Nombre completo *", st.session_state.cv_data["nombre"])
+    st.session_state.cv_data["email"] = st.text_input("Email *", st.session_state.cv_data["email"])
+    st.session_state.cv_data["ubicacion"] = st.text_input("Ubicación", st.session_state.cv_data["ubicacion"], placeholder="Buenos Aires, Argentina")
+
+with col2:
+    st.session_state.cv_data["telefono"] = st.text_input("Teléfono", st.session_state.cv_data["telefono"], placeholder="+54 11 1234-5678")
+    st.session_state.cv_data["linkedin"] = st.text_input("LinkedIn", st.session_state.cv_data["linkedin"], placeholder="linkedin.com/in/tu-perfil")
+
+st.divider()
+
+# --- PASO 3: Resumen ---
+st.subheader("3️⃣ Resumen profesional")
+
+if puesto_sel and "palabras_clave" in puesto_data:
+    st.caption(f"💡 Palabras clave sugeridas: {puesto_data['palabras_clave']}")
 
 st.session_state.cv_data["resumen"] = st.text_area(
-    "Escribí un resumen de 3-4 líneas destacando tu experiencia*",
-    value=st.session_state.cv_data["resumen"],
+    "Resumen (3-4 líneas) *",
+    st.session_state.cv_data["resumen"],
     height=100,
-    placeholder="Ejemplo: Científico de datos con 5 años de experiencia desarrollando modelos de ML..."
+    placeholder="Profesional con X años de experiencia en..."
 )
 
 st.divider()
 
-# Paso 4: Experiencia profesional
-st.subheader("💼 Paso 4: Experiencia profesional")
-st.caption(f"💡 {generar_sugerencias('experiencia', puesto_info)}")
+# --- PASO 4: Experiencia ---
+st.subheader("4️⃣ Experiencia laboral")
 
-num_experiencias = st.number_input("¿Cuántas experiencias querés agregar?", min_value=0, max_value=5, value=len(st.session_state.cv_data["experiencias"]))
+if puesto_sel and "verbos_accion" in puesto_data:
+    st.caption(f"💡 Verbos de acción: {puesto_data['verbos_accion']}")
+
+num_exp = st.number_input("Cantidad de experiencias", 0, 5, len(st.session_state.cv_data["experiencias"]))
 
 experiencias_temp = []
-for i in range(num_experiencias):
-    with st.expander(f"Experiencia #{i+1}", expanded=(i==0)):
+for i in range(num_exp):
+    with st.expander(f"Experiencia {i+1}", expanded=(i==0)):
         exp = st.session_state.cv_data["experiencias"][i] if i < len(st.session_state.cv_data["experiencias"]) else {}
         
         col1, col2 = st.columns(2)
         with col1:
-            puesto = st.text_input(f"Puesto", value=exp.get("puesto", ""), key=f"exp_puesto_{i}")
-            empresa = st.text_input(f"Empresa", value=exp.get("empresa", ""), key=f"exp_empresa_{i}")
+            puesto = st.text_input("Puesto", exp.get("puesto", ""), key=f"exp_p_{i}")
+            empresa = st.text_input("Empresa", exp.get("empresa", ""), key=f"exp_e_{i}")
         with col2:
-            periodo = st.text_input(f"Período", value=exp.get("periodo", ""), placeholder="2020 - 2023", key=f"exp_periodo_{i}")
+            periodo = st.text_input("Período", exp.get("periodo", ""), placeholder="2020 - 2023", key=f"exp_per_{i}")
         
-        descripcion = st.text_area(
-            f"Descripción de responsabilidades y logros",
-            value=exp.get("descripcion", ""),
-            height=100,
-            key=f"exp_desc_{i}",
-            placeholder="• Desarrollé modelos de ML que aumentaron la precisión en 25%\n• Lideré equipo de 3 analistas..."
-        )
+        desc = st.text_area("Descripción", exp.get("descripcion", ""), height=80, key=f"exp_d_{i}",
+                           placeholder="• Logro 1\n• Logro 2")
         
-        experiencias_temp.append({
-            "puesto": puesto,
-            "empresa": empresa,
-            "periodo": periodo,
-            "descripcion": descripcion
-        })
+        experiencias_temp.append({"puesto": puesto, "empresa": empresa, "periodo": periodo, "descripcion": desc})
 
 st.session_state.cv_data["experiencias"] = experiencias_temp
 
 st.divider()
 
-# Paso 5: Educación
-st.subheader("🎓 Paso 5: Educación")
+# --- PASO 5: Educación ---
+st.subheader("5️⃣ Educación")
 
-num_educacion = st.number_input("¿Cuántos títulos querés agregar?", min_value=0, max_value=5, value=len(st.session_state.cv_data["educacion"]))
+num_edu = st.number_input("Cantidad de títulos", 0, 5, len(st.session_state.cv_data["educacion"]))
 
 educacion_temp = []
-for i in range(num_educacion):
-    with st.expander(f"Título #{i+1}", expanded=(i==0)):
+for i in range(num_edu):
+    with st.expander(f"Título {i+1}", expanded=(i==0)):
         edu = st.session_state.cv_data["educacion"][i] if i < len(st.session_state.cv_data["educacion"]) else {}
         
         col1, col2 = st.columns(2)
         with col1:
-            titulo = st.text_input(f"Título", value=edu.get("titulo", ""), key=f"edu_titulo_{i}")
-            institucion = st.text_input(f"Institución", value=edu.get("institucion", ""), key=f"edu_inst_{i}")
+            titulo = st.text_input("Título", edu.get("titulo", ""), key=f"edu_t_{i}")
+            institucion = st.text_input("Institución", edu.get("institucion", ""), key=f"edu_i_{i}")
         with col2:
-            periodo = st.text_input(f"Período", value=edu.get("periodo", ""), placeholder="2015 - 2019", key=f"edu_periodo_{i}")
+            periodo = st.text_input("Período", edu.get("periodo", ""), placeholder="2015 - 2019", key=f"edu_p_{i}")
         
-        educacion_temp.append({
-            "titulo": titulo,
-            "institucion": institucion,
-            "periodo": periodo
-        })
+        educacion_temp.append({"titulo": titulo, "institucion": institucion, "periodo": periodo})
 
 st.session_state.cv_data["educacion"] = educacion_temp
 
 st.divider()
 
-# Paso 6: Habilidades técnicas
-st.subheader("🛠️ Paso 6: Habilidades técnicas")
-st.caption(f"💡 {generar_sugerencias('habilidades', puesto_info)}")
+# --- PASO 6: Habilidades ---
+st.subheader("6️⃣ Habilidades")
 
-habilidades_sugeridas = st.multiselect(
-    "Seleccioná de las habilidades sugeridas:",
-    options=puesto_info["habilidades_tecnicas"] + puesto_info["herramientas"],
-    default=[h for h in st.session_state.cv_data.get("habilidades", []) if h in puesto_info["habilidades_tecnicas"] + puesto_info["herramientas"]]
+if puesto_sel and "habilidades_sugeridas" in puesto_data:
+    habilidades_sugeridas = [h.strip() for h in puesto_data["habilidades_sugeridas"].split(",")]
+    st.caption(f"💡 Sugerencias: {', '.join(habilidades_sugeridas)}")
+    
+    hab_sel = st.multiselect(
+        "Seleccioná de las sugeridas",
+        habilidades_sugeridas,
+        default=[h for h in st.session_state.cv_data.get("habilidades", []) if h in habilidades_sugeridas]
+    )
+else:
+    hab_sel = []
+
+hab_custom = st.text_input(
+    "Agregá otras (separadas por coma)",
+    ", ".join([h for h in st.session_state.cv_data.get("habilidades", []) if h not in hab_sel])
 )
 
-habilidades_custom = st.text_input(
-    "Agregá otras habilidades (separadas por coma):",
-    value=", ".join([h for h in st.session_state.cv_data.get("habilidades", []) if h not in habilidades_sugeridas]),
-    placeholder="Docker, Git, AWS"
-)
-
-habilidades_final = list(habilidades_sugeridas)
-if habilidades_custom:
-    habilidades_final.extend([h.strip() for h in habilidades_custom.split(",")])
+habilidades_final = list(hab_sel)
+if hab_custom:
+    habilidades_final.extend([h.strip() for h in hab_custom.split(",")])
 
 st.session_state.cv_data["habilidades"] = habilidades_final
 
 st.divider()
 
-# Paso 7: Proyectos (opcional)
-st.subheader("🚀 Paso 7: Proyectos destacados (opcional)")
-st.caption(f"💡 {generar_sugerencias('proyectos', puesto_info)}")
-
-num_proyectos = st.number_input("¿Cuántos proyectos querés agregar?", min_value=0, max_value=5, value=len(st.session_state.cv_data["proyectos"]))
-
-proyectos_temp = []
-for i in range(num_proyectos):
-    with st.expander(f"Proyecto #{i+1}", expanded=(i==0)):
-        proy = st.session_state.cv_data["proyectos"][i] if i < len(st.session_state.cv_data["proyectos"]) else {}
-        
-        nombre = st.text_input(f"Nombre del proyecto", value=proy.get("nombre", ""), key=f"proy_nombre_{i}")
-        descripcion = st.text_area(
-            f"Descripción",
-            value=proy.get("descripcion", ""),
-            height=80,
-            key=f"proy_desc_{i}",
-            placeholder="Sistema de recomendación que aumentó las conversiones en 30%..."
-        )
-        
-        proyectos_temp.append({
-            "nombre": nombre,
-            "descripcion": descripcion
-        })
-
-st.session_state.cv_data["proyectos"] = proyectos_temp
+# --- PASO 7: Extras (opcional) ---
+with st.expander("➕ Información adicional (opcional)"):
+    st.session_state.cv_data["certificaciones"] = st.text_area(
+        "Certificaciones",
+        st.session_state.cv_data.get("certificaciones", ""),
+        placeholder="• Certificación 1\n• Certificación 2"
+    )
+    
+    st.session_state.cv_data["idiomas"] = st.text_area(
+        "Idiomas",
+        st.session_state.cv_data.get("idiomas", ""),
+        placeholder="• Español: Nativo\n• Inglés: Avanzado"
+    )
 
 st.divider()
 
-# Análisis ATS y generación
-st.subheader("📊 Análisis y generación del CV")
+# --- Generar PDF ---
+st.subheader("7️⃣ Generar CV")
 
-if st.button("🔍 Analizar y generar CV", type="primary"):
-    if st.session_state.cv_data["nombre"] and st.session_state.cv_data["resumen"]:
-        with st.spinner("Analizando tu CV..."):
-            score, palabras_encontradas = calcular_score_ats(st.session_state.cv_data, puesto_info)
+if st.button("📥 Descargar CV en PDF", type="primary", use_container_width=True):
+    if not st.session_state.cv_data["nombre"]:
+        st.error("⚠️ Por favor completá tu nombre")
+    elif not st.session_state.cv_data["resumen"]:
+        st.error("⚠️ Por favor completá el resumen profesional")
+    else:
+        with st.spinner("Generando tu CV..."):
+            estilo = ESTILOS.get(categoria_final, ESTILOS["General"])
+            pdf = generar_pdf(st.session_state.cv_data, estilo)
             
-            # Mostrar métricas
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Score ATS", f"{score*100:.1f}%", 
-                         delta="Excelente" if score >= 0.7 else "Mejorable")
-            with col2:
-                st.metric("Palabras clave", f"{len(palabras_encontradas)}/{len(puesto_info['palabras_clave'])}")
-            with col3:
-                color = "🟢" if score >= 0.7 else "🟡" if score >= 0.5 else "🔴"
-                st.metric("Estado", f"{color}")
-            
-            st.progress(score)
-            
-            # Detalles
-            col_det1, col_det2 = st.columns(2)
-            
-            with col_det1:
-                st.markdown("### ✅ Palabras clave incluidas")
-                for palabra in palabras_encontradas:
-                    st.markdown(f"✓ {palabra}")
-            
-            with col_det2:
-                st.markdown("### ⚠️ Palabras clave faltantes")
-                faltantes = [p for p in puesto_info["palabras_clave"] if p not in palabras_encontradas]
-                for palabra in faltantes:
-                    st.markdown(f"• {palabra}")
-            
-            # Recomendaciones
-            if score < 0.7:
-                st.warning(f"💡 **Recomendación:** Incluí las palabras clave faltantes en tu resumen, experiencia o proyectos para mejorar tu score ATS.")
-            else:
-                st.success("🎉 **¡Excelente!** Tu CV está bien optimizado para sistemas ATS.")
-            
-            # Generar PDF
-            pdf = generar_cv_pdf(st.session_state.cv_data, puesto_objetivo)
+            st.success("✅ ¡CV generado exitosamente!")
             
             st.download_button(
-                label="📥 Descargar CV en PDF",
+                label="💾 Descargar PDF",
                 data=pdf,
                 file_name=f"CV_{st.session_state.cv_data['nombre'].replace(' ', '_')}.pdf",
                 mime="application/pdf",
-                type="secondary"
+                use_container_width=True
             )
-    else:
-        st.error("⚠️ Por favor, completá al menos tu nombre y resumen profesional.")
 
 # Footer
 st.divider()
-st.caption("💼 Herramienta diseñada para optimizar CVs según algoritmos ATS utilizados por empresas tech")
+st.caption("💼 Generador simple de CVs profesionales")
