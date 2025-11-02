@@ -5,10 +5,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-from PIL import Image as PILImage
 import requests
 
 # --- Configuración ---
@@ -22,100 +21,37 @@ ESTILOS = {
     "Tecnología": {
         "color_primario": "#2C3E50",
         "color_secundario": "#3498DB",
-        "layout": "moderno",
-        "foto_recomendada": "opcional",
-        "mensaje_foto": "En tech la foto es opcional. Muchas empresas prefieren CVs sin foto."
+        "layout": "moderno"
     },
     "Marketing": {
         "color_primario": "#E91E63",
         "color_secundario": "#FF6F00",
-        "layout": "creativo",
-        "foto_recomendada": "recomendada",
-        "mensaje_foto": "En marketing es común incluir foto, especialmente en roles de cara al cliente."
+        "layout": "creativo"
     },
     "Finanzas": {
         "color_primario": "#1A237E",
         "color_secundario": "#5C6BC0",
-        "layout": "formal",
-        "foto_recomendada": "común",
-        "mensaje_foto": "En finanzas es común incluir foto formal tipo carnet."
+        "layout": "formal"
     },
     "Salud": {
         "color_primario": "#1976D2",
         "color_secundario": "#4FC3F7",
-        "layout": "profesional",
-        "foto_recomendada": "recomendada",
-        "mensaje_foto": "En salud es recomendable incluir foto profesional."
+        "layout": "profesional"
     },
     "Educación": {
         "color_primario": "#FF9800",
         "color_secundario": "#FFC107",
-        "layout": "amigable",
-        "foto_recomendada": "común",
-        "mensaje_foto": "En educación es común incluir foto."
+        "layout": "amigable"
     },
     "Ventas": {
         "color_primario": "#D32F2F",
         "color_secundario": "#FF5252",
-        "layout": "dinámico",
-        "foto_recomendada": "recomendada",
-        "mensaje_foto": "En ventas es muy recomendable incluir foto, genera confianza."
-    },
-    "Administración": {
-        "color_primario": "#5D4037",
-        "color_secundario": "#8D6E63",
-        "layout": "tradicional",
-        "foto_recomendada": "común",
-        "mensaje_foto": "En administración es común incluir foto formal."
-    },
-    "Recursos Humanos": {
-        "color_primario": "#7B1FA2",
-        "color_secundario": "#BA68C8",
-        "layout": "profesional",
-        "foto_recomendada": "recomendada",
-        "mensaje_foto": "En RRHH es recomendable incluir foto profesional."
-    },
-    "Ingeniería": {
-        "color_primario": "#455A64",
-        "color_secundario": "#78909C",
-        "layout": "técnico",
-        "foto_recomendada": "opcional",
-        "mensaje_foto": "En ingeniería la foto es opcional."
-    },
-    "Legal": {
-        "color_primario": "#263238",
-        "color_secundario": "#546E7A",
-        "layout": "formal",
-        "foto_recomendada": "común",
-        "mensaje_foto": "En legal es común incluir foto formal."
-    },
-    "Gastronomía": {
-        "color_primario": "#F57C00",
-        "color_secundario": "#FFB74D",
-        "layout": "cálido",
-        "foto_recomendada": "recomendada",
-        "mensaje_foto": "En gastronomía es recomendable incluir foto."
-    },
-    "Producción": {
-        "color_primario": "#558B2F",
-        "color_secundario": "#9CCC65",
-        "layout": "industrial",
-        "foto_recomendada": "común",
-        "mensaje_foto": "En producción es común incluir foto."
-    },
-    "Logística": {
-        "color_primario": "#00838F",
-        "color_secundario": "#4DD0E1",
-        "layout": "eficiente",
-        "foto_recomendada": "común",
-        "mensaje_foto": "En logística es común incluir foto."
+        "layout": "dinámico"
     },
     "General": {
         "color_primario": "#424242",
         "color_secundario": "#757575",
-        "layout": "clásico",
-        "foto_recomendada": "opcional",
-        "mensaje_foto": "La inclusión de foto es opcional según tu preferencia."
+        "layout": "clásico"
     }
 }
 
@@ -155,29 +91,7 @@ def cargar_puestos():
         }
         return pd.DataFrame(data)
 
-def procesar_foto(foto_file):
-    """Procesa y redimensiona la foto para el CV"""
-    try:
-        img = PILImage.open(foto_file)
-        
-        # Convertir a RGB si es necesario
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        # Redimensionar manteniendo aspecto (máximo 300x400)
-        img.thumbnail((300, 400), PILImage.Resampling.LANCZOS)
-        
-        # Guardar en buffer
-        buffer = BytesIO()
-        img.save(buffer, format='JPEG', quality=85)
-        buffer.seek(0)
-        
-        return buffer
-    except Exception as e:
-        st.error(f"Error al procesar la foto: {e}")
-        return None
-
-def generar_pdf(cv_data, estilo, foto_data=None):
+def generar_pdf(cv_data, estilo):
     """Genera PDF con diseño según categoría"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, 
@@ -223,82 +137,26 @@ def generar_pdf(cv_data, estilo, foto_data=None):
         borderPadding=3
     )
     
-    # Si hay foto, crear layout con tabla
-    if foto_data:
-        try:
-            # Crear imagen de ReportLab
-            img = Image(foto_data, width=1.5*inch, height=2*inch)
-            
-            # Información personal en texto
-            info_personal = []
-            info_personal.append(Paragraph(cv_data["nombre"], style_nombre))
-            
-            contacto_parts = []
-            if cv_data.get("email"):
-                contacto_parts.append(cv_data["email"])
-            if cv_data.get("telefono"):
-                contacto_parts.append(cv_data["telefono"])
-            if cv_data.get("ubicacion"):
-                contacto_parts.append(cv_data["ubicacion"])
-            if cv_data.get("linkedin"):
-                contacto_parts.append(cv_data["linkedin"])
-            
-            contacto = "<br/>".join(contacto_parts)
-            info_personal.append(Paragraph(contacto, style_contacto))
-            
-            if cv_data.get("puesto_objetivo"):
-                info_personal.append(Paragraph(f"<b>Objetivo:</b> {cv_data['puesto_objetivo']}", styles['Normal']))
-            
-            # Tabla con foto e info
-            data_table = [[img, info_personal]]
-            t = Table(data_table, colWidths=[2*inch, 4.5*inch])
-            t.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ]))
-            story.append(t)
-            story.append(Spacer(1, 20))
-        except:
-            # Si falla, usar layout sin foto
-            story.append(Paragraph(cv_data["nombre"], style_nombre))
-            contacto_parts = []
-            if cv_data.get("email"):
-                contacto_parts.append(cv_data["email"])
-            if cv_data.get("telefono"):
-                contacto_parts.append(cv_data["telefono"])
-            if cv_data.get("ubicacion"):
-                contacto_parts.append(cv_data["ubicacion"])
-            if cv_data.get("linkedin"):
-                contacto_parts.append(cv_data["linkedin"])
-            
-            contacto = " | ".join(contacto_parts)
-            story.append(Paragraph(contacto, style_contacto))
-            
-            if cv_data.get("puesto_objetivo"):
-                story.append(Paragraph(f"<b>Objetivo:</b> {cv_data['puesto_objetivo']}", styles['Normal']))
-                story.append(Spacer(1, 15))
-    else:
-        # Header sin foto - Nombre y contacto centrados
-        story.append(Paragraph(cv_data["nombre"], style_nombre))
-        
-        contacto_parts = []
-        if cv_data.get("email"):
-            contacto_parts.append(cv_data["email"])
-        if cv_data.get("telefono"):
-            contacto_parts.append(cv_data["telefono"])
-        if cv_data.get("ubicacion"):
-            contacto_parts.append(cv_data["ubicacion"])
-        if cv_data.get("linkedin"):
-            contacto_parts.append(cv_data["linkedin"])
-        
-        contacto = " | ".join(contacto_parts)
-        story.append(Paragraph(contacto, style_contacto))
-        
-        # Puesto objetivo
-        if cv_data.get("puesto_objetivo"):
-            story.append(Paragraph(f"<b>Objetivo:</b> {cv_data['puesto_objetivo']}", styles['Normal']))
-            story.append(Spacer(1, 15))
+    # Header - Nombre y contacto
+    story.append(Paragraph(cv_data["nombre"], style_nombre))
+    
+    contacto_parts = []
+    if cv_data.get("email"):
+        contacto_parts.append(cv_data["email"])
+    if cv_data.get("telefono"):
+        contacto_parts.append(cv_data["telefono"])
+    if cv_data.get("ubicacion"):
+        contacto_parts.append(cv_data["ubicacion"])
+    if cv_data.get("linkedin"):
+        contacto_parts.append(cv_data["linkedin"])
+    
+    contacto = " | ".join(contacto_parts)
+    story.append(Paragraph(contacto, style_contacto))
+    
+    # Puesto objetivo
+    if cv_data.get("puesto_objetivo"):
+        story.append(Paragraph(f"<b>Objetivo:</b> {cv_data['puesto_objetivo']}", styles['Normal']))
+        story.append(Spacer(1, 15))
     
     # Resumen
     if cv_data.get("resumen"):
@@ -424,36 +282,6 @@ with col2:
 
 st.divider()
 
-# --- FOTO ---
-st.subheader("📸 Foto (opcional)")
-
-# Obtener estilo según categoría
-estilo_actual = ESTILOS.get(categoria_final, ESTILOS["General"])
-
-# Mensaje contextual según categoría
-st.info(f"💡 {estilo_actual['mensaje_foto']}")
-
-incluir_foto = st.checkbox("Incluir foto en el CV")
-
-foto_procesada = None
-if incluir_foto:
-    st.caption("**Recomendaciones para tu foto:**")
-    st.caption("✓ Fondo neutro y uniforme  |  ✓ Vestimenta profesional  |  ✓ Buena iluminación  |  ✓ Solo tu rostro")
-    
-    foto_file = st.file_uploader("Subí tu foto", type=["jpg", "jpeg", "png"], help="Formato JPG o PNG, máximo 5MB")
-    
-    if foto_file:
-        col_preview1, col_preview2 = st.columns([1, 2])
-        with col_preview1:
-            st.image(foto_file, caption="Preview", width=150)
-        with col_preview2:
-            st.success("✅ Foto cargada correctamente")
-        
-        # Procesar foto
-        foto_procesada = procesar_foto(foto_file)
-
-st.divider()
-
 # --- PASO 3: Resumen ---
 st.subheader("3️⃣ Resumen profesional")
 
@@ -576,7 +404,7 @@ if st.button("📥 Descargar CV en PDF", type="primary", use_container_width=Tru
     else:
         with st.spinner("Generando tu CV..."):
             estilo = ESTILOS.get(categoria_final, ESTILOS["General"])
-            pdf = generar_pdf(st.session_state.cv_data, estilo, foto_procesada)
+            pdf = generar_pdf(st.session_state.cv_data, estilo)
             
             st.success("✅ ¡CV generado exitosamente!")
             
